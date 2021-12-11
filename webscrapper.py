@@ -3,32 +3,27 @@ from bs4 import BeautifulSoup as Soup
 
 ##################################################### IMDB #####################################################
 def IMDB(movie_name_raw):
-    imdb_url = "https://www.imdb.com/search/title/?title="
-    imdb_base_url = "https://www.imdb.com/"
-    # movie_name = str(input())
-    movie_name = movie_name_raw
-    imdb_url = imdb_url + movie_name
+    movie_name = movie_name_raw.replace(' ', '+')
 
-    r = requests.get(imdb_url)
+    imdb_base_url = 'https://www.imdb.com/'
+    tag = ''
+    try:
+        source = requests.get('https://www.imdb.com/find?s=tt&q={}'.format(movie_name))
+        source.raise_for_status()
+        
+        soup = Soup(source.text, 'html.parser')
 
-    imdb_movies_soup = Soup(r.text, "html.parser")
+        movies = soup.find('tr', class_='findResult odd').a
+        flag=0
+        title= ""
+        movie = str(movies)
+        tag = movie.split('/')[2]
+    
+    except Exception as e:
+        print('There was a problem: {}'.format(e))
 
-    movie_tags = imdb_movies_soup.find_all("a", attrs={"class": None})
+    rev_url = imdb_base_url + "title/" + str(tag) + "/criticreviews/"
 
-    movie_tags = [
-        tag.attrs["href"]
-        for tag in movie_tags
-        if tag.attrs["href"].startswith("/title") & tag.attrs["href"].endswith("/")
-    ]
-
-    movie_tags = list(dict.fromkeys(movie_tags))
-
-    rev_url = imdb_base_url + str(movie_tags[0]) + "criticreviews/"
-    title_url = imdb_base_url + str(movie_tags[0])
-
-    title_link = requests.get(title_url)
-    title_soups = Soup(title_link.text, "html.parser")
-    title = title_soups.find("h1")
 
     link = requests.get(rev_url)
     movie_soups = Soup(link.text, "html.parser")
@@ -48,19 +43,11 @@ def IMDB(movie_name_raw):
 def rottenTomatoe(movie_name_raw):
     summary = ""
     movie_name = movie_name_raw.replace(" ", "_")
-    rt_url = "https://www.rottentomatoes.com/"
-    rt_searchUrl = rt_url + str("search?search=") + str(movie_name)
+    movie_name = movie_name.lower()
+    rt_url = "https://www.rottentomatoes.com/m/"
 
-    rt = requests.get(rt_searchUrl)
-    rt_movies_soup = Soup(rt.text, "html.parser")
-    rt_mov = str(rt_movies_soup.find_all("script", attrs={"id": "movies-json"}))
-
-    rt_base_url = rt_mov[
-        rt_mov.find("https://rottentomatoes.com/m/") : (
-            rt_mov.find('"', rt_mov.find("https://rottentomatoes.com/m/"), len(rt_mov))
-        )
-    ]
-
+    rt_base_url = rt_url + str(movie_name)
+    
     review_type = "/reviews?type="
 
     url = rt_base_url + review_type + "top_critics"
